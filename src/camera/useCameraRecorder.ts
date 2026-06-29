@@ -1,7 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { Quaternion, Vector3, type PerspectiveCamera } from 'three'
-import { useEditorStore } from '../state/useEditorStore'
+import { selectActiveScene, useEditorStore } from '../state/useEditorStore'
 import type { CameraMode, CameraSample } from '../types/camera'
 
 /** Don't sample faster than this (seconds) — keeps recordings compact. */
@@ -22,7 +22,7 @@ const qb = new Quaternion()
  */
 export function useCameraRecorder(cameraRef: React.RefObject<PerspectiveCamera | null>) {
   const cameraMode = useEditorStore((s) => s.cameraMode)
-  const recording = useEditorStore((s) => s.recording)
+  const recording = useEditorStore((s) => selectActiveScene(s).recording)
   const commitRecording = useEditorStore((s) => s.commitRecording)
   const stopPlayback = useEditorStore((s) => s.stopPlayback)
 

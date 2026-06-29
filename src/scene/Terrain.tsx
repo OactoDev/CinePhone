@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { TERRAIN_PRESETS } from '../config/library'
-import { useEditorStore } from '../state/useEditorStore'
+import { selectActiveScene, useEditorStore } from '../state/useEditorStore'
 import { GridFloor } from './GridFloor'
 import { generateTerrainGeometry } from './terrain/generateTerrain'
 
@@ -10,7 +10,7 @@ import { generateTerrainGeometry } from './terrain/generateTerrain'
  * switching presets is cheap and switching back is instant.
  */
 export function Terrain() {
-  const terrainId = useEditorStore((s) => s.terrainId)
+  const terrainId = useEditorStore((s) => selectActiveScene(s).terrainId)
   const preset = TERRAIN_PRESETS.find((p) => p.id === terrainId) ?? TERRAIN_PRESETS[0]
 
   const geometry = useMemo(

@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import { ACESFilmicToneMapping } from 'three'
-import { ENVIRONMENT } from '../config/studio'
+import { SceneCapturer } from '../scene/SceneCapturer'
 import { SceneRoot } from '../scene/SceneRoot'
 import type { MotionState } from '../types/motion'
 
@@ -19,11 +19,16 @@ export function Experience({ motionRef, motionActive }: ExperienceProps) {
     <Canvas
       shadows="soft"
       dpr={[1, 2]}
-      gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
+      gl={{
+        antialias: true,
+        toneMapping: ACESFilmicToneMapping,
+        toneMappingExposure: 1.05,
+        // Needed so we can read pixels back for keyframe capture.
+        preserveDrawingBuffer: true,
+      }}
     >
-      <color attach="background" args={[ENVIRONMENT.background]} />
-      <fogExp2 attach="fog" args={[ENVIRONMENT.background, ENVIRONMENT.fogDensity]} />
       <SceneRoot motionRef={motionRef} motionActive={motionActive} />
+      <SceneCapturer />
     </Canvas>
   )
 }

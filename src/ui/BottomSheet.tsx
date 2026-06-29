@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react'
+import { useGSAP } from '@gsap/react'
+import gsap from 'gsap'
+import { useRef, type ReactNode } from 'react'
 import { CloseIcon } from './icons'
 
 interface BottomSheetProps {
@@ -11,10 +13,28 @@ interface BottomSheetProps {
 }
 
 /**
- * Reusable half-height sheet that slides up from the bottom. Mounted always so
- * it can animate in/out via the `is-open` class; a tap on the scrim closes it.
+ * Reusable half-height sheet that slides up from the bottom (CSS transform). On
+ * open, GSAP reveals the body content with a subtle upward stagger so it feels
+ * alive rather than just sliding in.
  */
 export function BottomSheet({ open, title, onClose, children, headerRight }: BottomSheetProps) {
+  const body = useRef<HTMLDivElement>(null)
+
+  useGSAP(
+    () => {
+      if (!open || !body.current) return
+      gsap.from(body.current.children, {
+        y: 14,
+        opacity: 0,
+        stagger: 0.04,
+        duration: 0.35,
+        ease: 'power2.out',
+        delay: 0.12, // after the sheet has slid up
+      })
+    },
+    { dependencies: [open] },
+  )
+
   return (
     <>
       <div className={`scrim ${open ? 'is-open' : ''}`} onClick={onClose} aria-hidden={!open} />
@@ -35,7 +55,9 @@ export function BottomSheet({ open, title, onClose, children, headerRight }: Bot
             </button>
           </div>
         </header>
-        <div className="sheet__body">{children}</div>
+        <div className="sheet__body" ref={body}>
+          {children}
+        </div>
       </section>
     </>
   )

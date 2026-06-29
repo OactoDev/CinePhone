@@ -1,5 +1,8 @@
+import { useGSAP } from '@gsap/react'
+import gsap from 'gsap'
+import { useRef } from 'react'
 import { useEditorStore } from '../state/useEditorStore'
-import { CameraIcon, CubeIcon, PlayIcon, StopIcon } from './icons'
+import { ArIcon, CameraIcon, ClapperboardIcon, CubeIcon, PlayIcon, StopIcon } from './icons'
 
 /**
  * The right-side vertical pill rail (matches the reference screenshot):
@@ -8,24 +11,40 @@ import { CameraIcon, CubeIcon, PlayIcon, StopIcon } from './icons'
  */
 export function ControlRail() {
   const panel = useEditorStore((s) => s.panel)
-  const preview = useEditorStore((s) => s.preview)
+  const arActive = useEditorStore((s) => s.arActive)
   const openPanel = useEditorStore((s) => s.openPanel)
   const closePanel = useEditorStore((s) => s.closePanel)
-  const togglePreview = useEditorStore((s) => s.togglePreview)
+  const toggleAr = useEditorStore((s) => s.toggleAr)
+  const openGeneration = useEditorStore((s) => s.openGeneration)
+  const root = useRef<HTMLElement>(null)
 
-  const toggle = (target: 'library' | 'camera') =>
+  const toggle = (target: 'library' | 'camera' | 'preview') =>
     panel === target ? closePanel() : openPanel(target)
 
+  // Staggered entrance for the rail buttons.
+  useGSAP(
+    () => {
+      gsap.from('.rail__btn', {
+        scale: 0.4,
+        opacity: 0,
+        stagger: 0.06,
+        duration: 0.45,
+        ease: 'back.out(1.7)',
+      })
+    },
+    { scope: root },
+  )
+
   return (
-    <nav className="rail" aria-label="Scene controls">
+    <nav className="rail" aria-label="Scene controls" ref={root}>
       <button
         type="button"
-        className={`rail__btn ${preview ? 'is-active' : ''}`}
-        aria-label={preview ? 'Stop preview' : 'Play preview'}
-        aria-pressed={preview}
-        onClick={togglePreview}
+        className={`rail__btn ${panel === 'preview' ? 'is-active' : ''}`}
+        aria-label="Preview scene"
+        aria-pressed={panel === 'preview'}
+        onClick={() => toggle('preview')}
       >
-        {preview ? <StopIcon /> : <PlayIcon />}
+        {panel === 'preview' ? <StopIcon size={20} /> : <PlayIcon size={20} />}
       </button>
 
       <button
@@ -35,7 +54,7 @@ export function ControlRail() {
         aria-pressed={panel === 'library'}
         onClick={() => toggle('library')}
       >
-        <CubeIcon />
+        <CubeIcon size={23} />
       </button>
 
       <button
@@ -45,7 +64,26 @@ export function ControlRail() {
         aria-pressed={panel === 'camera'}
         onClick={() => toggle('camera')}
       >
-        <CameraIcon />
+        <CameraIcon size={23} />
+      </button>
+
+      <button
+        type="button"
+        className={`rail__btn ${arActive ? 'is-active' : ''}`}
+        aria-label={arActive ? 'Exit AR' : 'Enter AR (walk through)'}
+        aria-pressed={arActive}
+        onClick={toggleAr}
+      >
+        <ArIcon size={23} />
+      </button>
+
+      <button
+        type="button"
+        className="rail__btn rail__btn--cta"
+        aria-label="Generate Movie"
+        onClick={openGeneration}
+      >
+        <ClapperboardIcon size={22} />
       </button>
     </nav>
   )

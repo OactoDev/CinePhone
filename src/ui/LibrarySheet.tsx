@@ -1,10 +1,12 @@
 import { useEditorStore } from '../state/useEditorStore'
 import type { LibraryTab } from '../types/ui'
 import { BottomSheet } from './BottomSheet'
+import { EnvironmentTab } from './EnvironmentTab'
 import { ObjectsTab } from './ObjectsTab'
 import { TerrainTab } from './TerrainTab'
 
 const TABS: { id: LibraryTab; label: string }[] = [
+  { id: 'environment', label: 'Environment' },
   { id: 'terrain', label: 'Terrain' },
   { id: 'objects', label: 'Objects' },
 ]
@@ -35,7 +37,9 @@ export function LibrarySheet() {
 
   return (
     <BottomSheet open={open} title="Library" onClose={closePanel} headerRight={tabSwitcher}>
-      {libraryTab === 'terrain' ? <TerrainTab /> : <ObjectsTab />}
+      {libraryTab === 'environment' && <EnvironmentTab />}
+      {libraryTab === 'terrain' && <TerrainTab />}
+      {libraryTab === 'objects' && <ObjectsTab />}
     </BottomSheet>
   )
 }

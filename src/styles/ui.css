@@ -783,6 +783,148 @@ button {
   transform: scale(0.97);
 }
 
+/* ---- Status overlay (REC badge + placement hint) ----------------------- */
+.status-overlay {
+  position: absolute;
+  top: calc(var(--safe-t) + 64px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 26;
+  pointer-events: none;
+}
+.rec-badge,
+.place-hint {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--surface);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+.rec-badge {
+  color: #e8553b;
+}
+.rec-badge__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e8553b;
+  animation: rec-pulse 1s ease-in-out infinite;
+}
+@keyframes rec-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.rec-badge__stop,
+.place-hint__cancel {
+  border: none;
+  background: rgba(127, 127, 127, 0.18);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.genphase__summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 8px 0;
+}
+
+/* ---- Shot list + AI director ------------------------------------------- */
+.synopsis {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.direct-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.ghost-btn--xs {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 8px;
+}
+.beat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tile);
+  margin-bottom: 6px;
+}
+.beat__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.beat__title {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 2px 0;
+}
+.beat__reorder {
+  display: flex;
+  gap: 2px;
+}
+.beat__desc {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+.beat__tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.beat__clip {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 6px;
+}
+
 /* ---- Camera handoff (desktop QR) --------------------------------------- */
 .handoff {
   display: flex;

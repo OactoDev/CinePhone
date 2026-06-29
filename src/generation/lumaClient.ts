@@ -51,16 +51,19 @@ export async function getGeneration(id: string): Promise<Generation> {
   return json as Generation
 }
 
-/** Poll until completed/failed or timeout; calls `onState` on each change. */
+/** Poll until completed/failed or timeout; calls `onState` on each change.
+ *  Aborts early (throws "cancelled") whenever `shouldCancel` returns true. */
 export async function pollUntilDone(
   id: string,
   onState?: (state: Generation['state']) => void,
+  shouldCancel?: () => boolean,
 ): Promise<Generation> {
   const deadline = Date.now() + LUMA.pollTimeoutMs
   let last: string | undefined
   // Initial grace period — video jobs take a while to start.
   await sleep(LUMA.pollIntervalMs)
   while (Date.now() < deadline) {
+    if (shouldCancel?.()) throw new Error('cancelled')
     const gen = await getGeneration(id)
     if (gen.state !== last) {
       last = gen.state

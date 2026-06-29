@@ -34,7 +34,8 @@ export function GenerationPhase() {
   const scenes = useEditorStore((s) => s.project.scenes)
   const generations = useEditorStore((s) => s.generations)
   const compile = useEditorStore((s) => s.compile)
-  const { generateMovie, captureThumbnails } = useMovieGeneration()
+  const cancelGeneration = useEditorStore((s) => s.cancelGeneration)
+  const { generateMovie, captureThumbnails, retryFailed } = useMovieGeneration()
 
   const [running, setRunning] = useState(false)
   const [health, setHealth] = useState<CloudHealth | null>(null)
@@ -82,7 +83,21 @@ export function GenerationPhase() {
     }
   }
 
+  const retry = async () => {
+    if (running) return
+    setRunning(true)
+    try {
+      await retryFailed()
+    } finally {
+      setRunning(false)
+      loadHistory()
+    }
+  }
+
   const compiling = compile.status === 'loading' || compile.status === 'compiling'
+  const startedCount = scenes.filter((s) => generations[s.id]).length
+  const readyCount = scenes.filter((s) => generations[s.id]?.videoUrl).length
+  const failedCount = scenes.filter((s) => generations[s.id]?.status === 'failed').length
 
   return (
     <section className="genphase" ref={root}>
@@ -148,6 +163,20 @@ export function GenerationPhase() {
       )}
       {compile.status === 'failed' && <div className="genphase__notice">{compile.error}</div>}
 
+      {startedCount > 0 && !running && (
+        <div className="genphase__summary">
+          <span>
+            {readyCount} of {scenes.length} scene{scenes.length === 1 ? '' : 's'} ready
+            {failedCount > 0 ? ` · ${failedCount} failed` : ''}
+          </span>
+          {failedCount > 0 && (
+            <button type="button" className="ghost-btn ghost-btn--sm" onClick={retry}>
+              Retry failed
+            </button>
+          )}
+        </div>
+      )}
+
       {health?.aurora && history.length > 0 && (
         <div className="gen-history">
           <div className="list-head">
@@ -174,15 +203,21 @@ export function GenerationPhase() {
         <button type="button" className="ghost-btn" onClick={closeGeneration} disabled={running}>
           Back
         </button>
-        <button
-          type="button"
-          className="pill-btn pill-btn--cta"
-          onClick={start}
-          disabled={running || compiling || !configured || scenes.length === 0}
-        >
-          <PlayIcon size={18} />
-          {running ? 'Generating…' : compile.status === 'done' ? 'Regenerate' : 'Generate Movie'}
-        </button>
+        {running ? (
+          <button type="button" className="pill-btn" onClick={cancelGeneration}>
+            Cancel
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="pill-btn pill-btn--cta"
+            onClick={start}
+            disabled={compiling || !configured || scenes.length === 0}
+          >
+            <PlayIcon size={18} />
+            {compile.status === 'done' ? 'Regenerate' : 'Generate Movie'}
+          </button>
+        )}
       </footer>
     </section>
   )

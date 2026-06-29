@@ -34,14 +34,19 @@ const OBJECT_ICON: Record<ObjectKind, LucideIcon> = {
 export function ObjectsTab() {
   const objects = useEditorStore((s) => selectActiveScene(s).objects)
   const selectedId = useEditorStore((s) => s.selectedId)
-  const addObject = useEditorStore((s) => s.addObject)
   const removeObject = useEditorStore((s) => s.removeObject)
   const selectObject = useEditorStore((s) => s.selectObject)
   const clearObjects = useEditorStore((s) => s.clearObjects)
-  const addCharacter = useEditorStore((s) => s.addCharacter)
-  const addProp = useEditorStore((s) => s.addProp)
+  const setPlacing = useEditorStore((s) => s.setPlacing)
+  const closePanel = useEditorStore((s) => s.closePanel)
 
   const labelFor = (kind: string) => OBJECT_PALETTE.find((p) => p.kind === kind)?.label ?? kind
+
+  // Arm "tap the ground to place" and reveal the scene by closing the sheet.
+  const arm = (placing: Parameters<typeof setPlacing>[0]) => {
+    setPlacing(placing)
+    closePanel()
+  }
 
   return (
     <>
@@ -56,7 +61,7 @@ export function ObjectsTab() {
               key={preset.id}
               type="button"
               className="card"
-              onClick={() => addCharacter(preset.id)}
+              onClick={() => arm({ type: 'character', value: preset.id })}
             >
               <span className="card__icon">
                 <Icon size={22} strokeWidth={1.9} />
@@ -72,7 +77,12 @@ export function ObjectsTab() {
       </div>
       <div className="card-grid">
         {PROP_PRESETS.map((preset) => (
-          <button key={preset.id} type="button" className="card" onClick={() => addProp(preset.id)}>
+          <button
+            key={preset.id}
+            type="button"
+            className="card"
+            onClick={() => arm({ type: 'prop', value: preset.id })}
+          >
             <span className="card__icon">
               <Boxes size={22} strokeWidth={1.9} />
             </span>
@@ -88,7 +98,12 @@ export function ObjectsTab() {
         {OBJECT_PALETTE.map((item) => {
           const Icon = OBJECT_ICON[item.kind] ?? Box
           return (
-            <button key={item.kind} type="button" className="card" onClick={() => addObject(item.kind)}>
+            <button
+              key={item.kind}
+              type="button"
+              className="card"
+              onClick={() => arm({ type: 'object', value: item.kind })}
+            >
               <span className="card__icon" style={{ color: item.color }}>
                 <Icon size={22} strokeWidth={1.9} />
               </span>

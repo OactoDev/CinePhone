@@ -17,6 +17,8 @@ export const PROJECT_SCHEMA_VERSION = 4
 export interface Scene {
   id: string
   name: string
+  /** Free-form scene synopsis — the AI director input + Luma prompt enrichment. */
+  synopsis?: string
   /** Terrain preset id (see `config/library.ts`). */
   terrainId: string
   /** Environment/lighting preset id (see `config/environments.ts`). */

@@ -7,11 +7,11 @@ import {
   saveProjectCloud,
   type ProjectSummary,
 } from '../cloud/storageClient'
-import { getClip } from '../config/clips'
 import { SCENE_TEMPLATES } from '../config/templates'
 import { loadModelCatalog, syncModelsCloud } from '../cloud/modelCatalog'
 import { selectActiveScene, useEditorStore } from '../state/useEditorStore'
 import { CheckIcon, ChevronIcon, LayersIcon, PencilIcon, PlusIcon, TrashIcon } from './icons'
+import { ShotList } from './ShotList'
 
 interface ProjectHudProps {
   /** Feed a typed director's command into the same parser the voice uses. */
@@ -33,8 +33,6 @@ export function ProjectHud({ submitCommand }: ProjectHudProps) {
   const selectScene = useEditorStore((s) => s.selectScene)
   const renameScene = useEditorStore((s) => s.renameScene)
   const removeScene = useEditorStore((s) => s.removeScene)
-  const removeAction = useEditorStore((s) => s.removeAction)
-  const performCharacter = useEditorStore((s) => s.performCharacter)
   const loadProjectDocument = useEditorStore((s) => s.loadProjectDocument)
   const addSceneFromTemplate = useEditorStore((s) => s.addSceneFromTemplate)
   const setModelCatalog = useEditorStore((s) => s.setModelCatalog)
@@ -219,45 +217,7 @@ export function ProjectHud({ submitCommand }: ProjectHudProps) {
             ))}
           </div>
 
-          <div className="list-head">
-            <span className="list-head__title">Shot list · {activeScene.name}</span>
-          </div>
-          <ul className="action-list">
-            {activeScene.actions.length === 0 && (
-              <li className="obj-list__empty">Say “create action … end action” to direct a beat.</li>
-            )}
-            {activeScene.actions.map((action, i) => {
-              const clip = action.clipId ? getClip(action.clipId) : null
-              return (
-                <li key={action.id} className="action-row">
-                  <span className="action-row__num">{i + 1}</span>
-                  <span className="action-row__desc">
-                    {action.description || <em>…</em>}
-                  </span>
-                  {clip ? (
-                    <button
-                      type="button"
-                      className="clip-badge"
-                      title="Replay clip"
-                      onClick={() => action.characterId && performCharacter(action.characterId, clip.id)}
-                    >
-                      {clip.label}
-                    </button>
-                  ) : (
-                    <span className="clip-badge clip-badge--none">—</span>
-                  )}
-                  <button
-                    type="button"
-                    className="icon-btn icon-btn--sm"
-                    aria-label="Delete action"
-                    onClick={() => removeAction(action.id)}
-                  >
-                    <TrashIcon size={16} />
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+          <ShotList />
 
           <label className="field">
             <span className="field__label">Director’s command</span>

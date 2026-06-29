@@ -2,6 +2,7 @@ import type { Connect, Plugin } from 'vite'
 import { loadEnv } from 'vite'
 import { isAuroraConfigured, isS3Configured, readAwsEnv } from './awsClients.ts'
 import { choreograph } from './choreograph.ts'
+import { direct } from './direct.ts'
 import {
   listGenerations,
   listModels,
@@ -84,6 +85,9 @@ export function awsApi(): Plugin {
 
           if (path === '/choreograph' && req.method === 'POST') {
             return sendJson(res, 200, await choreograph(raw.ANTHROPIC_API_KEY ?? '', await readBody(req)))
+          }
+          if (path === '/direct' && req.method === 'POST') {
+            return sendJson(res, 200, await direct(raw.ANTHROPIC_API_KEY ?? '', await readBody(req)))
           }
 
           if (path === '/db/project' && req.method === 'PUT') {

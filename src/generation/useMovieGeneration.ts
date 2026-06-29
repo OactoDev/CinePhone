@@ -19,8 +19,11 @@ import { createGeneration, pollUntilDone, type Keyframe } from './lumaClient'
  * Capture must be sequential (only one scene is "active"/rendered at a time);
  * generation/polling fan out up to `LUMA.concurrency`.
  */
+const cancelled = () => useEditorStore.getState().genCancelled
+
 export function useMovieGeneration() {
-  const run = useCallback(async () => {
+  /** Run the pipeline over all scenes, or just `sceneIds` (retry of failures). */
+  const run = useCallback(async (sceneIds?: string[]) => {
     const store = useEditorStore.getState()
     const { project, captureFn, selectScene, setSceneGen, resetGenerations } = store
 
@@ -30,13 +33,17 @@ export function useMovieGeneration() {
       throw new Error('S3 storage not configured — set AWS_REGION + S3_BUCKET in .env')
     }
 
-    resetGenerations()
-    const scenes = project.scenes
+    if (sceneIds) useEditorStore.setState({ genCancelled: false })
+    else resetGenerations()
+    const scenes = sceneIds
+      ? project.scenes.filter((s) => sceneIds.includes(s.id))
+      : project.scenes
     const originalActive = project.activeSceneId
 
     // --- Phase 1: capture + upload (sequential) ---
     const prepared: { scene: Scene; frame0: Keyframe; frame1?: Keyframe }[] = []
     for (const scene of scenes) {
+      if (cancelled()) break
       try {
         setSceneGen(scene.id, { status: 'capturing' })
         selectScene(scene.id)
@@ -67,6 +74,10 @@ export function useMovieGeneration() {
 
     // --- Phase 2: generate + poll (concurrent, capped) ---
     await pool(prepared, LUMA.concurrency, async ({ scene, frame0, frame1 }) => {
+      if (cancelled()) {
+        setSceneGen(scene.id, { status: 'failed', error: 'Cancelled' })
+        return
+      }
       try {
         setSceneGen(scene.id, { status: 'queued' })
         const keyframes = frame1 ? { frame0, frame1 } : { frame0 }
@@ -77,10 +88,17 @@ export function useMovieGeneration() {
           keyframes,
         })
         setSceneGen(scene.id, { generationId: gen.id, status: 'dreaming' })
-        const done = await pollUntilDone(gen.id, (state) =>
-          setSceneGen(scene.id, { status: state === 'completed' ? 'completed' : 'dreaming' }),
+        const done = await pollUntilDone(
+          gen.id,
+          (state) => setSceneGen(scene.id, { status: state === 'completed' ? 'completed' : 'dreaming' }),
+          cancelled,
         )
         const videoUrl = done.assets?.video ?? undefined
+        // A "completed" job with no video URL is a failure — don't silently drop it.
+        if (!videoUrl) {
+          setSceneGen(scene.id, { status: 'failed', error: 'Luma returned no video' })
+          return
+        }
         setSceneGen(scene.id, { status: 'completed', videoUrl })
         // Best-effort history write to Aurora (no-op if not configured).
         void recordGenerationCloud({
@@ -132,6 +150,10 @@ export function useMovieGeneration() {
 
   const compile = useCallback(async () => {
     const { project, generations, setCompile } = useEditorStore.getState()
+    if (cancelled()) {
+      setCompile({ status: 'failed', error: 'Cancelled' })
+      return
+    }
     const urls = project.scenes
       .map((s) => generations[s.id]?.videoUrl)
       .filter((u): u is string => Boolean(u))
@@ -153,10 +175,19 @@ export function useMovieGeneration() {
   /** Full one-tap pipeline: generate all scenes, then compile. */
   const generateMovie = useCallback(async () => {
     await run()
-    await compile()
+    if (!cancelled()) await compile()
   }, [run, compile])
 
-  return { generateMovie, run, compile, captureThumbnails }
+  /** Re-run only the scenes that failed, then re-compile. */
+  const retryFailed = useCallback(async () => {
+    const { project, generations } = useEditorStore.getState()
+    const failed = project.scenes.filter((s) => generations[s.id]?.status === 'failed').map((s) => s.id)
+    if (!failed.length) return
+    await run(failed)
+    if (!cancelled()) await compile()
+  }, [run, compile])
+
+  return { generateMovie, run, compile, captureThumbnails, retryFailed }
 }
 
 function msg(e: unknown) {

@@ -13,6 +13,7 @@ import type { CompileState, SceneGeneration } from '../types/generation'
 import type { ObjectKind, PropInstance, SceneObject } from '../types/objects'
 import type { PoseStatus } from '../types/pose'
 import type { SceneFrames } from '../scene/SceneCapturer'
+import { terrainHeightAt } from '../scene/terrain/generateTerrain'
 import { PROJECT_SCHEMA_VERSION, type Project, type Scene } from '../types/project'
 import type { Vec3 } from '../types/scene'
 import type { LibraryTab, Panel } from '../types/ui'
@@ -34,7 +35,7 @@ function makeProp(presetId: string, position: Vec3): PropInstance {
 }
 
 function makeCharacter(name: string, position: Vec3, color: string, presetId?: string): Character {
-  return { id: uid('char'), name, position, color, presetId }
+  return { id: uid('char'), name, position, rotation: [0, 0, 0], scale: 1, color, presetId }
 }
 
 function createScene(name: string, seeded = false): Scene {
@@ -88,6 +89,20 @@ interface CharacterController {
   rev: number
 }
 
+export type TransformMode = 'translate' | 'rotate' | 'scale'
+
+/** An armed library item waiting for a ground tap (tap-to-place). */
+export type Placing =
+  | { type: 'object'; value: ObjectKind }
+  | { type: 'character'; value: string }
+  | { type: 'prop'; value: string }
+
+/** One beat returned by the AI director (title + raw plan steps). */
+export interface DirectedBeat {
+  title: string
+  steps: AnimationStep[]
+}
+
 interface EditorState {
   // ===== Source of truth =====
   project: Project
@@ -97,8 +112,12 @@ interface EditorState {
   libraryTab: LibraryTab
   preview: boolean
   selectedId: string | null
-  /** When on, the selected entity shows a translate gizmo. */
+  /** When on, the selected entity shows a transform gizmo. */
   moveMode: boolean
+  /** Which transform the gizmo edits. */
+  transformMode: TransformMode
+  /** Armed "tap the ground to place" request from the Library, if any. */
+  placing: Placing | null
   cameraMode: CameraMode
   /** The action currently being dictated (between create/end markers). */
   draftActionId: string | null
@@ -109,6 +128,8 @@ interface EditorState {
   arStatus: PoseStatus
   /** "Generate Movie" phase. */
   genOpen: boolean
+  /** Set true to abort an in-flight generation run. */
+  genCancelled: boolean
   generations: Record<string, SceneGeneration>
   compile: CompileState
   /** Registered by the in-canvas SceneCapturer; captures the active scene. */
@@ -135,22 +156,29 @@ interface EditorState {
   loadProjectDocument: (project: Project) => void
 
   // ---- Objects ----
-  addObject: (kind: ObjectKind) => void
+  addObject: (kind: ObjectKind, position?: Vec3) => void
   removeObject: (id: string) => void
   selectObject: (id: string | null) => void
   clearObjects: () => void
   setMoveMode: (on: boolean) => void
+  setTransformMode: (mode: TransformMode) => void
   /** Move any entity (object/character/prop) to a new ground position. */
   moveEntity: (id: string, position: Vec3) => void
+  /** Apply a transform patch (position/rotation/scale) to any entity. */
+  transformEntity: (id: string, patch: { position?: Vec3; rotation?: Vec3; scale?: number }) => void
   /** Delete the selected entity, whatever kind it is. */
   removeSelected: () => void
+  // ---- Tap-to-place ----
+  setPlacing: (placing: Placing | null) => void
+  /** Place the armed library item at a ground point (clears `placing`). */
+  placeAt: (point: Vec3) => void
 
   // ---- Characters ----
-  addCharacter: (presetId: string) => void
+  addCharacter: (presetId: string, position?: Vec3) => void
   removeCharacter: (id: string) => void
 
   // ---- Props (GLB set pieces) ----
-  addProp: (presetId: string) => void
+  addProp: (presetId: string, position?: Vec3) => void
   removeProp: (id: string) => void
 
   // ---- Terrain / environment ----
@@ -166,12 +194,22 @@ interface EditorState {
   clearRecording: () => void
   setFov: (fov: number) => void
 
-  // ---- Film: actions (driven by voice commands) ----
+  // ---- Film: actions (voice + manual + AI director) ----
   beginAction: () => void
   updateDraftDescription: (description: string) => void
   endAction: (description: string) => void
   endScene: () => void
   removeAction: (id: string) => void
+  /** Edit any field of a beat (title/description/clipId/characterId). */
+  updateAction: (id: string, patch: Partial<Action>) => void
+  /** Move a beat up (-1) or down (+1) in the shot list. */
+  reorderAction: (id: string, dir: -1 | 1) => void
+  /** Add an empty beat (manual authoring, no voice). Returns its id. */
+  addBeat: () => string
+  /** Scene synopsis (AI director input + Luma prompt). */
+  setSceneSynopsis: (synopsis: string) => void
+  /** Replace or append AI-directed beats (title + plan) to the active scene. */
+  addDirectedBeats: (beats: DirectedBeat[], replace: boolean) => void
   /** Attach a choreographed plan to an action (for preview replay). */
   setActionPlan: (actionId: string, plan: AnimationPlan) => void
   /** Drive characters with a choreographed plan (grouped by character). */
@@ -186,6 +224,8 @@ interface EditorState {
   // ---- Generate Movie phase ----
   openGeneration: () => void
   closeGeneration: () => void
+  /** Request cancellation of an in-flight generate/compile run. */
+  cancelGeneration: () => void
   setSceneGen: (sceneId: string, patch: Partial<SceneGeneration>) => void
   resetGenerations: () => void
   setCompile: (patch: Partial<CompileState>) => void
@@ -247,12 +287,15 @@ export const useEditorStore = create<EditorState>()(
         preview: false,
         selectedId: null,
         moveMode: false,
+        transformMode: 'translate',
+        placing: null,
         cameraMode: 'live',
         draftActionId: null,
         controllers: {},
         arActive: false,
         arStatus: 'idle',
         genOpen: false,
+        genCancelled: false,
         generations: {},
         compile: { status: 'idle', progress: 0 },
         captureFn: null,
@@ -350,9 +393,9 @@ export const useEditorStore = create<EditorState>()(
           set({ project, selectedId: null, cameraMode: 'live', draftActionId: null, controllers: {}, genOpen: false }),
 
         // ---- Objects ----
-        addObject: (kind) => {
+        addObject: (kind, position) => {
           const spread = (active().objects.length % 5) - 2
-          const obj = makeObject(kind, [spread * 1.4, SPAWN_HEIGHT, -2.5])
+          const obj = makeObject(kind, position ?? [spread * 1.4, SPAWN_HEIGHT, -2.5])
           patchScene((sc) => ({ ...sc, objects: [...sc.objects, obj] }))
           set({ selectedId: obj.id })
         },
@@ -366,13 +409,29 @@ export const useEditorStore = create<EditorState>()(
           set({ selectedId: null })
         },
         setMoveMode: (moveMode) => set({ moveMode }),
-        moveEntity: (id, position) =>
-          patchScene((sc) => ({
-            ...sc,
-            objects: sc.objects.map((o) => (o.id === id ? { ...o, position } : o)),
-            characters: sc.characters.map((c) => (c.id === id ? { ...c, position } : c)),
-            props: sc.props.map((p) => (p.id === id ? { ...p, position } : p)),
-          })),
+        setTransformMode: (transformMode) => set({ transformMode }),
+        moveEntity: (id, position) => get().transformEntity(id, { position }),
+        transformEntity: (id, patch) =>
+          patchScene((sc) => {
+            const apply = <T extends { id: string }>(e: T) => (e.id === id ? { ...e, ...patch } : e)
+            return {
+              ...sc,
+              objects: sc.objects.map(apply),
+              characters: sc.characters.map(apply),
+              props: sc.props.map(apply),
+            }
+          }),
+        setPlacing: (placing) => set({ placing }),
+        placeAt: (point) => {
+          const placing = get().placing
+          if (!placing) return
+          const [x, , z] = point
+          const groundY = terrainHeightAt(active().terrainId, x, z)
+          if (placing.type === 'object') get().addObject(placing.value, [x, groundY + SPAWN_HEIGHT, z])
+          else if (placing.type === 'character') get().addCharacter(placing.value, [x, groundY, z])
+          else get().addProp(placing.value, [x, groundY, z])
+          set({ placing: null })
+        },
         removeSelected: () => {
           const id = get().selectedId
           if (!id) return
@@ -386,27 +445,29 @@ export const useEditorStore = create<EditorState>()(
         },
 
         // ---- Characters ----
-        addCharacter: (presetId) => {
+        addCharacter: (presetId, position) => {
           const preset = getPreset(presetId)
           if (!preset) return
           const count = active().characters.length
           const spread = (count % 5) - 2
           const character = makeCharacter(
             preset.label,
-            [spread * 1.8, 0, -4.5],
+            position ?? [spread * 1.8, 0, -4.5],
             '#7c83ff',
             preset.id,
           )
           patchScene((sc) => ({ ...sc, characters: [...sc.characters, character] }))
+          set({ selectedId: character.id })
         },
         removeCharacter: (id) =>
           patchScene((sc) => ({ ...sc, characters: sc.characters.filter((c) => c.id !== id) })),
 
         // ---- Props ----
-        addProp: (presetId) => {
+        addProp: (presetId, position) => {
           const spread = (active().props.length % 5) - 2
-          const prop = makeProp(presetId, [spread * 2.2, 0, -6])
+          const prop = makeProp(presetId, position ?? [spread * 2.2, 0, -6])
           patchScene((sc) => ({ ...sc, props: [...sc.props, prop] }))
+          set({ selectedId: prop.id })
         },
         removeProp: (id) =>
           patchScene((sc) => ({ ...sc, props: sc.props.filter((p) => p.id !== id) })),
@@ -481,6 +542,46 @@ export const useEditorStore = create<EditorState>()(
           patchScene((sc) => ({ ...sc, actions: sc.actions.filter((a) => a.id !== id) }))
           if (get().draftActionId === id) set({ draftActionId: null })
         },
+        updateAction: (id, patch) => patchAction(id, (a) => ({ ...a, ...patch })),
+        reorderAction: (id, dir) =>
+          patchScene((sc) => {
+            const i = sc.actions.findIndex((a) => a.id === id)
+            const j = i + dir
+            if (i < 0 || j < 0 || j >= sc.actions.length) return sc
+            const actions = [...sc.actions]
+            ;[actions[i], actions[j]] = [actions[j], actions[i]]
+            return { ...sc, actions }
+          }),
+        addBeat: () => {
+          const action: Action = {
+            id: uid('act'),
+            title: 'New beat',
+            description: '',
+            clipId: null,
+            characterId: active().characters[0]?.id ?? null,
+            takes: [],
+            createdAt: nowISO(),
+          }
+          patchScene((sc) => ({ ...sc, actions: [...sc.actions, action] }))
+          return action.id
+        },
+        setSceneSynopsis: (synopsis) => patchScene((sc) => ({ ...sc, synopsis })),
+        addDirectedBeats: (beats, replace) => {
+          const made: Action[] = beats.map((b) => {
+            const firstPlay = b.steps.find((s) => s.action === 'play' && s.clip)
+            return {
+              id: uid('act'),
+              title: b.title,
+              description: b.title,
+              clipId: (firstPlay?.clip as ClipId) ?? null,
+              characterId: b.steps[0]?.characterId ?? active().characters[0]?.id ?? null,
+              plan: { steps: b.steps },
+              takes: [],
+              createdAt: nowISO(),
+            }
+          })
+          patchScene((sc) => ({ ...sc, actions: replace ? made : [...sc.actions, ...made] }))
+        },
         setActionPlan: (actionId, plan) => patchAction(actionId, (a) => ({ ...a, plan })),
         setPlan: (plan) => applyPlan(plan),
         performCharacter: (characterId, clipId) => playClip(characterId, clipId),
@@ -503,7 +604,8 @@ export const useEditorStore = create<EditorState>()(
           if (get().cameraMode === 'playback') get().stopPlayback()
           set({ genOpen: true, arActive: false, panel: 'none', preview: false })
         },
-        closeGeneration: () => set({ genOpen: false }),
+        closeGeneration: () => set({ genOpen: false, genCancelled: false }),
+        cancelGeneration: () => set({ genCancelled: true }),
         setSceneGen: (sceneId, patch) =>
           set((s) => {
             const existing = s.generations[sceneId]
@@ -519,7 +621,8 @@ export const useEditorStore = create<EditorState>()(
               },
             }
           }),
-        resetGenerations: () => set({ generations: {}, compile: { status: 'idle', progress: 0 } }),
+        resetGenerations: () =>
+          set({ generations: {}, compile: { status: 'idle', progress: 0 }, genCancelled: false }),
         setCompile: (patch) => set((s) => ({ compile: { ...s.compile, ...patch } })),
         setCaptureFn: (captureFn) => set({ captureFn }),
         setModelCatalog: (modelCatalog) => set({ modelCatalog }),
@@ -544,6 +647,17 @@ export const useEditorStore = create<EditorState>()(
             ...sc,
             environmentId: sc.environmentId ?? DEFAULT_ENVIRONMENT_ID,
             props: sc.props ?? [],
+          }))
+        }
+        if (state?.project && version < 4) {
+          // v4: per-character transform (rotation/scale).
+          state.project.scenes = state.project.scenes.map((sc) => ({
+            ...sc,
+            characters: (sc.characters ?? []).map((c) => ({
+              ...c,
+              rotation: c.rotation ?? [0, 0, 0],
+              scale: c.scale ?? 1,
+            })),
           }))
         }
         if (state?.project) state.project.schemaVersion = PROJECT_SCHEMA_VERSION

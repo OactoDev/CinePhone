@@ -49,7 +49,10 @@ export async function saveProjectCloud(project: Project): Promise<void> {
 export async function loadProjectCloud(id: string): Promise<Project | null> {
   const res = await fetch(`/api/db/project?id=${encodeURIComponent(id)}`)
   if (!res.ok) throw new Error((await res.json())?.error ?? 'Load failed')
-  return ((await res.json()).document as Project) ?? null
+  const doc = (await res.json()).document
+  if (!doc) return null
+  // The RDS Data API returns the jsonb column as a JSON *string* — parse it.
+  return (typeof doc === 'string' ? JSON.parse(doc) : doc) as Project
 }
 
 export interface ProjectSummary {

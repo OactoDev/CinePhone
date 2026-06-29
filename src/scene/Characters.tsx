@@ -21,7 +21,13 @@ export function Characters() {
         const groundY = terrainHeightAt(terrainId, character.position[0], character.position[2])
         const pos: Vec3 = [character.position[0], groundY, character.position[2]]
         return (
-          <Movable key={character.id} id={character.id} position={pos}>
+          <Movable
+            key={character.id}
+            id={character.id}
+            position={pos}
+            rotation={character.rotation}
+            scale={character.scale}
+          >
             {preset ? (
               <Suspense fallback={null}>
                 <GltfCharacter character={character} preset={preset} />

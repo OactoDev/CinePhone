@@ -45,12 +45,16 @@ export function buildScenePrompt(scene: Scene, project: Project): string {
     .map((o) => `a ${o.color} ${o.kind} (${place(o.position)})`)
     .join(', ')
 
+  // Use each beat's title + director's intent (not just the clip name) so the
+  // video reflects the directed story, with the clip as a motion hint.
   const performances = scene.actions
-    .filter((a) => a.clipId)
+    .filter((a) => a.clipId || a.description || a.title)
     .map((a) => {
       const who = scene.characters.find((c) => c.id === a.characterId)?.name ?? 'a figure'
-      const clip = getClip(a.clipId!).label.toLowerCase()
-      return `${who} ${clip}s${a.description ? ` (${a.description})` : ''}`
+      const intent = a.description || a.title || ''
+      const clip = a.clipId ? getClip(a.clipId).label.toLowerCase() : ''
+      if (intent && clip) return `${who} ${intent} (${clip})`
+      return `${who} ${intent || `${clip}s`}`
     })
     .join('; ')
 
@@ -58,6 +62,7 @@ export function buildScenePrompt(scene: Scene, project: Project): string {
 
   const parts = [
     project.description ? `${project.description.trim()}.` : '',
+    scene.synopsis?.trim() ? `${scene.synopsis.trim()}.` : '',
     `${terrain} environment.`,
     objects ? `Featuring ${objects}.` : '',
     characters ? `Characters: ${characters}.` : '',

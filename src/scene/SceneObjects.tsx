@@ -27,8 +27,8 @@ function ObjectMesh({ object }: { object: SceneObject }) {
   const shiny = object.kind === 'sphere' || object.kind === 'torusKnot'
 
   return (
-    <Movable id={object.id} position={object.position}>
-      <mesh rotation={object.rotation} scale={object.scale} castShadow receiveShadow>
+    <Movable id={object.id} position={object.position} rotation={object.rotation} scale={object.scale}>
+      <mesh castShadow receiveShadow>
         <Geometry kind={object.kind} />
         <meshStandardMaterial
           color={object.color}

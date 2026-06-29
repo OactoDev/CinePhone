@@ -14,6 +14,7 @@ import { LibrarySheet } from './ui/LibrarySheet'
 import { PreviewPanel } from './ui/PreviewPanel'
 import { ProjectHud } from './ui/ProjectHud'
 import { SelectionBar } from './ui/SelectionBar'
+import { StatusOverlay } from './ui/StatusOverlay'
 import { VoiceChip } from './ui/VoiceChip'
 import { useVoiceCommands } from './voice/useVoiceCommands'
 
@@ -47,6 +48,7 @@ function App() {
 
       <ProjectHud submitCommand={submitCommand} />
       <VoiceChip voice={voice} />
+      <StatusOverlay />
       <SelectionBar />
       <ControlRail />
       <LibrarySheet />

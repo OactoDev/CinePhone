@@ -80,7 +80,7 @@ export function PreviewPanel() {
                 title={a.description}
               >
                 <span className="pv-seg__label">
-                  {a.clipId ? getClip(a.clipId).label : `Beat ${i + 1}`}
+                  {a.title || (a.clipId ? getClip(a.clipId).label : `Beat ${i + 1}`)}
                 </span>
                 {i === index && (
                   <span

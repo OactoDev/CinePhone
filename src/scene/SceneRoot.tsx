@@ -21,6 +21,8 @@ interface SceneRootProps {
  */
 export function SceneRoot({ motionRef, motionActive }: SceneRootProps) {
   const selectObject = useEditorStore((s) => s.selectObject)
+  const placing = useEditorStore((s) => s.placing)
+  const placeAt = useEditorStore((s) => s.placeAt)
   const environmentId = useEditorStore((s) => selectActiveScene(s).environmentId)
   const env = getEnvironment(environmentId)
 
@@ -37,6 +39,21 @@ export function SceneRoot({ motionRef, motionActive }: SceneRootProps) {
 
         <Terrain />
         <ContactShadows position={[0, 0.01, 0]} opacity={0.5} scale={30} blur={2.4} far={12} />
+
+        {/* Tap-to-place: an invisible ground catcher, active only while placing. */}
+        {placing && (
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            onPointerDown={(e) => {
+              e.stopPropagation()
+              placeAt([e.point.x, e.point.y, e.point.z])
+            }}
+          >
+            <planeGeometry args={[400, 400]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+        )}
+
         <SceneObjects />
         <SceneProps />
         <Characters />

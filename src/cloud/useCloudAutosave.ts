@@ -32,8 +32,12 @@ export function useCloudAutosave() {
       const id = urlId ?? useEditorStore.getState().project.id
       try {
         const doc = await loadProjectCloud(id)
-        if (doc) useEditorStore.getState().loadProjectDocument(doc)
-        else await saveProjectCloud(useEditorStore.getState().project)
+        // Only adopt a well-formed cloud project; never replace local with junk.
+        if (doc && Array.isArray(doc.scenes) && doc.scenes.length > 0) {
+          useEditorStore.getState().loadProjectDocument(doc)
+        } else {
+          await saveProjectCloud(useEditorStore.getState().project)
+        }
       } catch {
         /* offline / not configured — keep local */
       }

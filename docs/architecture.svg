@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" font-family="'Poppins', -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#1c1a2a" flood-opacity="0.13"/>
+    </filter>
+    <marker id="head" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto-start-reverse" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#7c6fe8"/>
+    </marker>
+  </defs>
+
+  <!-- frontend stage background -->
+  <rect width="1200" height="680" fill="#f3f4f7"/>
+
+  <!-- title -->
+  <text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#1b1b1f">CinePhone — Data Flow</text>
+  <text x="600" y="64" text-anchor="middle" font-size="13" fill="#8a897f">The browser app is the hub; it reaches AI &amp; cloud only through same-origin /api/*</text>
+
+  <!-- ============ A: Phone / user input ============ -->
+  <rect x="40" y="290" width="150" height="130" rx="20" fill="#ffffff" stroke="#1416261a" stroke-width="1" filter="url(#shadow)"/>
+  <text x="115" y="338" text-anchor="middle" font-size="15" font-weight="700" fill="#1b1b1f">Phone</text>
+  <text x="115" y="362" text-anchor="middle" font-size="12" fill="#8a897f">motion · voice</text>
+  <text x="115" y="380" text-anchor="middle" font-size="12" fill="#8a897f">camera · taps</text>
+
+  <!-- ============ B: CinePhone app (hub — accent) ============ -->
+  <rect x="280" y="200" width="290" height="310" rx="20" fill="#eceafb" stroke="#7c6fe8" stroke-width="1.6" filter="url(#shadow)"/>
+  <text x="425" y="232" text-anchor="middle" font-size="16" font-weight="700" fill="#5a4ed0">CinePhone App</text>
+  <text x="425" y="252" text-anchor="middle" font-size="12" fill="#8a897f">React Three Fiber · runs in browser</text>
+  <g text-anchor="middle">
+    <rect x="300" y="266" width="250" height="50" rx="14" fill="#ffffff" stroke="#1416261a"/>
+    <text x="425" y="287" font-size="12.5" font-weight="600" fill="#1b1b1f">Scene &amp; Capture</text>
+    <text x="425" y="305" font-size="12" fill="#8a897f">render → read keyframes</text>
+
+    <rect x="300" y="324" width="250" height="50" rx="14" fill="#ffffff" stroke="#1416261a"/>
+    <text x="425" y="345" font-size="12.5" font-weight="600" fill="#1b1b1f">Director</text>
+    <text x="425" y="363" font-size="12" fill="#8a897f">voice / text → action</text>
+
+    <rect x="300" y="382" width="250" height="50" rx="14" fill="#ffffff" stroke="#1416261a"/>
+    <text x="425" y="403" font-size="12.5" font-weight="600" fill="#1b1b1f">Movie Compile</text>
+    <text x="425" y="421" font-size="12" fill="#8a897f">ffmpeg.wasm → MP4</text>
+
+    <rect x="300" y="440" width="250" height="50" rx="14" fill="#ffffff" stroke="#1416261a"/>
+    <text x="425" y="461" font-size="12.5" font-weight="600" fill="#1b1b1f">Store</text>
+    <text x="425" y="479" font-size="12" fill="#8a897f">Zustand · localStorage</text>
+  </g>
+
+  <!-- ============ C: API gateway (dark CTA tone) ============ -->
+  <rect x="640" y="288" width="170" height="134" rx="20" fill="#16161b" filter="url(#shadow)"/>
+  <path d="M712 308 L724 328 L700 328 Z" fill="#ffffff"/>
+  <text x="725" y="352" text-anchor="middle" font-size="14.5" font-weight="700" fill="#ffffff">API Gateway</text>
+  <text x="725" y="373" text-anchor="middle" font-size="12" fill="#ffffffcc">/api/* · Vercel</text>
+  <text x="725" y="391" text-anchor="middle" font-size="11" fill="#ffffff99">secrets stay server-side</text>
+  <text x="725" y="408" text-anchor="middle" font-size="10.5" fill="#ffffff66">dev: Vite middleware</text>
+
+  <!-- ============ D: external services (white surfaces) ============ -->
+  <g>
+    <rect x="890" y="144" width="275" height="86" rx="20" fill="#ffffff" stroke="#1416261a" stroke-width="1" filter="url(#shadow)"/>
+    <text x="1027" y="178" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1f">Anthropic Claude</text>
+    <text x="1027" y="201" text-anchor="middle" font-size="12" fill="#8a897f">choreographer · claude-haiku</text>
+
+    <rect x="890" y="256" width="275" height="86" rx="20" fill="#ffffff" stroke="#1416261a" stroke-width="1" filter="url(#shadow)"/>
+    <text x="1027" y="290" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1f">Luma Dream Machine</text>
+    <text x="1027" y="313" text-anchor="middle" font-size="12" fill="#8a897f">image → video (ray-2)</text>
+
+    <rect x="890" y="368" width="275" height="86" rx="20" fill="#ffffff" stroke="#1416261a" stroke-width="1" filter="url(#shadow)"/>
+    <text x="1027" y="402" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1f">AWS S3</text>
+    <text x="1027" y="425" text-anchor="middle" font-size="12" fill="#8a897f">keyframes + GLB store</text>
+
+    <rect x="890" y="480" width="275" height="86" rx="20" fill="#ffffff" stroke="#1416261a" stroke-width="1" filter="url(#shadow)"/>
+    <text x="1027" y="514" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1f">AWS Aurora</text>
+    <text x="1027" y="537" text-anchor="middle" font-size="12" fill="#8a897f">PostgreSQL · RDS Data API</text>
+  </g>
+
+  <!-- ============ DATA-FLOW EDGES (uniform accent bezier) ============ -->
+  <g fill="none" stroke="#7c6fe8" stroke-width="1.6">
+    <path d="M190,355 L274,355" marker-end="url(#head)"/>
+    <path d="M570,355 L634,355" marker-start="url(#head)" marker-end="url(#head)"/>
+    <path d="M810,330 C854,305 852,200 884,187" marker-start="url(#head)" marker-end="url(#head)"/>
+    <path d="M810,345 C854,330 852,305 884,299" marker-start="url(#head)" marker-end="url(#head)"/>
+    <path d="M810,365 C854,382 852,398 884,411" marker-start="url(#head)" marker-end="url(#head)"/>
+    <path d="M810,380 C854,405 852,505 884,523" marker-start="url(#head)" marker-end="url(#head)"/>
+  </g>
+
+  <!-- edge labels: what data moves -->
+  <g font-size="11.5" fill="#8a897f" text-anchor="middle">
+    <rect x="184" y="332" width="96" height="19" rx="9.5" fill="#f3f4f7"/>
+    <text x="232" y="345">user input</text>
+
+    <rect x="566" y="332" width="74" height="19" rx="9.5" fill="#f3f4f7"/>
+    <text x="603" y="345">/api/*</text>
+
+    <rect x="810" y="240" width="102" height="19" rx="9.5" fill="#f3f4f7"/>
+    <text x="861" y="253">AnimationPlan</text>
+
+    <rect x="819" y="306" width="76" height="19" rx="9.5" fill="#f3f4f7"/>
+    <text x="857" y="319">video clip</text>
+
+    <rect x="817" y="384" width="82" height="19" rx="9.5" fill="#f3f4f7"/>
+    <text x="858" y="397">keyframes</text>
+
+    <rect x="817" y="466" width="82" height="19" rx="9.5" fill="#f3f4f7"/>
+    <text x="858" y="479">save / load</text>
+  </g>
+
+  <!-- footnote -->
+  <text x="600" y="636" text-anchor="middle" font-size="11.5" fill="#b6b5ad">Every secret stays behind the gateway — the browser never holds a key. Luma fetches keyframes from the private S3 bucket via presigned URLs.</text>
+  <text x="600" y="656" text-anchor="middle" font-size="11" fill="#b6b5ad">↔ request / response   ·   → one-way</text>
+</svg>

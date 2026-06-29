@@ -26,7 +26,15 @@ async function getFFmpeg(onProgress?: (p: number) => void): Promise<FFmpeg> {
       return ffmpeg
     })()
   }
-  const ffmpeg = await ffmpegPromise
+  let ffmpeg: FFmpeg
+  try {
+    ffmpeg = await ffmpegPromise
+  } catch (e) {
+    // A failed load (transient CDN/network error) must not poison every future
+    // attempt — clear the cache so the next compile retries the load.
+    ffmpegPromise = null
+    throw e
+  }
   if (onProgress) ffmpeg.on('progress', ({ progress }) => onProgress(Math.min(1, progress)))
   return ffmpeg
 }

@@ -1,23 +1,23 @@
 import { useCallback } from 'react'
-import { LUMA } from '../config/luma'
-import { getHealth, recordGenerationCloud, uploadKeyframe } from '../cloud/storageClient'
+import { FAL } from '../config/fal'
+import { recordGenerationCloud } from '../cloud/storageClient'
 import { nextFrame } from '../lib/captureCanvas'
 import { uid } from '../lib/uid'
 import { useEditorStore } from '../state/useEditorStore'
 import type { Scene } from '../types/project'
 import { buildScenePrompt } from './buildPrompt'
 import { compileMovie } from './compileMovie'
-import { createGeneration, pollUntilDone, type Keyframe } from './lumaClient'
+import { createGeneration, pollUntilDone, uploadImage } from './falClient'
 
 /**
  * Orchestrates the Generate Movie pipeline:
- *   1. (sequential) for each scene: switch to it, capture keyframes, upload them.
- *   2. (concurrent, capped) create a Luma image-to-video generation per scene
+ *   1. (sequential) for each scene: switch to it, capture a keyframe, upload it.
+ *   2. (concurrent, capped) create a fal.ai image→video generation per scene
  *      and poll to completion.
  *   3. compile all completed clips into one MP4.
  *
  * Capture must be sequential (only one scene is "active"/rendered at a time);
- * generation/polling fan out up to `LUMA.concurrency`.
+ * generation/polling fan out up to `FAL.concurrency`.
  */
 const cancelled = () => useEditorStore.getState().genCancelled
 
@@ -28,10 +28,6 @@ export function useMovieGeneration() {
     const { project, captureFn, selectScene, setSceneGen, resetGenerations } = store
 
     if (!captureFn) throw new Error('Renderer not ready for capture')
-    const health = await getHealth()
-    if (!health.storage) {
-      throw new Error('S3 storage not configured — set AWS_REGION + S3_BUCKET in .env')
-    }
 
     if (sceneIds) useEditorStore.setState({ genCancelled: false })
     else resetGenerations()
@@ -41,7 +37,7 @@ export function useMovieGeneration() {
     const originalActive = project.activeSceneId
 
     // --- Phase 1: capture + upload (sequential) ---
-    const prepared: { scene: Scene; frame0: Keyframe; frame1?: Keyframe }[] = []
+    const prepared: { scene: Scene; imageUrl: string }[] = []
     for (const scene of scenes) {
       if (cancelled()) break
       try {
@@ -54,18 +50,10 @@ export function useMovieGeneration() {
         const frames = await useEditorStore.getState().captureFn!()
         setSceneGen(scene.id, { thumbDataUrl: frames.frame0, status: 'uploading' })
 
-        const stamp = Date.now()
-        const frame0Url = await uploadKeyframe(frames.frame0, `${scene.id}-${stamp}-0.jpg`)
-        const frame1Url = frames.frame1
-          ? await uploadKeyframe(frames.frame1, `${scene.id}-${stamp}-1.jpg`)
-          : undefined
-        setSceneGen(scene.id, { frame0Url, frame1Url })
-
-        prepared.push({
-          scene,
-          frame0: { type: 'image', url: frame0Url },
-          frame1: frame1Url ? { type: 'image', url: frame1Url } : undefined,
-        })
+        // Host the keyframe on fal storage (fal-readable, HEAD-able).
+        const imageUrl = await uploadImage(frames.frame0)
+        setSceneGen(scene.id, { frame0Url: imageUrl })
+        prepared.push({ scene, imageUrl })
       } catch (e) {
         setSceneGen(scene.id, { status: 'failed', error: msg(e) })
       }
@@ -73,30 +61,24 @@ export function useMovieGeneration() {
     selectScene(originalActive)
 
     // --- Phase 2: generate + poll (concurrent, capped) ---
-    await pool(prepared, LUMA.concurrency, async ({ scene, frame0, frame1 }) => {
+    await pool(prepared, FAL.concurrency, async ({ scene, imageUrl }) => {
       if (cancelled()) {
         setSceneGen(scene.id, { status: 'failed', error: 'Cancelled' })
         return
       }
       try {
         setSceneGen(scene.id, { status: 'queued' })
-        const keyframes = frame1 ? { frame0, frame1 } : { frame0 }
-        const gen = await createGeneration({
-          prompt: buildScenePrompt(scene, project),
-          // With both keyframes Luma requires loop:false.
-          loop: false,
-          keyframes,
-        })
-        setSceneGen(scene.id, { generationId: gen.id, status: 'dreaming' })
-        const done = await pollUntilDone(
-          gen.id,
+        const prompt = buildScenePrompt(scene, project)
+        const sub = await createGeneration({ prompt, imageUrl })
+        setSceneGen(scene.id, { generationId: sub.request_id, status: 'dreaming' })
+        const { videoUrl } = await pollUntilDone(
+          sub,
           (state) => setSceneGen(scene.id, { status: state === 'completed' ? 'completed' : 'dreaming' }),
           cancelled,
         )
-        const videoUrl = done.assets?.video ?? undefined
         // A "completed" job with no video URL is a failure — don't silently drop it.
         if (!videoUrl) {
-          setSceneGen(scene.id, { status: 'failed', error: 'Luma returned no video' })
+          setSceneGen(scene.id, { status: 'failed', error: 'fal returned no video' })
           return
         }
         setSceneGen(scene.id, { status: 'completed', videoUrl })
@@ -105,8 +87,8 @@ export function useMovieGeneration() {
           id: uid('gen'),
           projectId: project.id,
           sceneId: scene.id,
-          prompt: buildScenePrompt(scene, project),
-          lumaId: gen.id,
+          prompt,
+          lumaId: sub.request_id,
           videoUrl,
           status: 'completed',
         })

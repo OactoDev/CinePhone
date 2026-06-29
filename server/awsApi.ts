@@ -49,14 +49,15 @@ export function awsApi(): Plugin {
       server.middlewares.use('/api', async (req, res, next) => {
         const url = new URL(req.url ?? '', 'http://localhost')
         const path = url.pathname.replace(/\/$/, '')
-        // Luma routes belong to the luma proxy middleware.
-        if (path.startsWith('/luma')) return next()
+        // Video proxy routes belong to their own middleware.
+        if (path.startsWith('/luma') || path.startsWith('/fal')) return next()
         try {
           if (path === '/health' && req.method === 'GET') {
             return sendJson(res, 200, {
               storage: isS3Configured(env),
               aurora: isAuroraConfigured(env),
               luma: Boolean(raw.LUMA_API_KEY),
+              fal: Boolean(raw.FAL_API_KEY),
               llm: Boolean(raw.ANTHROPIC_API_KEY),
             })
           }

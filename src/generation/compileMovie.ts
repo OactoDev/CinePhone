@@ -1,6 +1,6 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile, toBlobURL } from '@ffmpeg/util'
-import { proxiedAssetUrl } from './lumaClient'
+import { proxiedAssetUrl } from './falClient'
 
 /**
  * Compile the per-scene Luma clips into a single MP4, entirely in-browser via

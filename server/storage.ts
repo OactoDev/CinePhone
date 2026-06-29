@@ -53,12 +53,15 @@ export async function handleUpload(env: AwsEnv, raw: string): Promise<{ url: str
     }),
   )
 
-  // Public bucket → direct URL; otherwise a time-limited presigned GET URL.
-  const url = env.s3PublicBase
-    ? `${env.s3PublicBase.replace(/\/$/, '')}/${objectKey}`
-    : await getSignedUrl(s3, new GetObjectCommand({ Bucket: env.s3Bucket, Key: objectKey }), {
-        expiresIn: PRESIGN_TTL,
-      })
+  // Always return a presigned GET URL: keyframes must be fetchable by the
+  // external video API (fal) within the hour, with no public-bucket requirement.
+  // (A direct s3PublicBase URL only works if the bucket/objects are public-read,
+  // which silently breaks the download otherwise.)
+  const url = await getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: env.s3Bucket, Key: objectKey }),
+    { expiresIn: PRESIGN_TTL },
+  )
 
   return { url }
 }

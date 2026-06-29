@@ -36,7 +36,8 @@ export function lumaProxy(): Plugin {
     name: 'cinephone-luma-proxy',
     configureServer(server) {
       const env = loadEnv(server.config.mode, process.cwd(), '')
-      const apiKey = env.LUMA_API_KEY ?? ''
+      // Trim to guard against a stray newline/space in .env corrupting the header.
+      const apiKey = (env.LUMA_API_KEY ?? '').trim()
       const authHeaders = {
         authorization: `Bearer ${apiKey}`,
         'content-type': 'application/json',

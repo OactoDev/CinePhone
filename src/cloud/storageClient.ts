@@ -10,16 +10,19 @@ export interface CloudHealth {
   storage: boolean
   aurora: boolean
   luma: boolean
+  fal: boolean
   llm: boolean
 }
+
+const NO_HEALTH: CloudHealth = { storage: false, aurora: false, luma: false, fal: false, llm: false }
 
 export async function getHealth(): Promise<CloudHealth> {
   try {
     const res = await fetch('/api/health')
-    if (!res.ok) return { storage: false, aurora: false, luma: false, llm: false }
+    if (!res.ok) return NO_HEALTH
     return (await res.json()) as CloudHealth
   } catch {
-    return { storage: false, aurora: false, luma: false, llm: false }
+    return NO_HEALTH
   }
 }
 

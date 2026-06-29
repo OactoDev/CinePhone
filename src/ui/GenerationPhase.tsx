@@ -70,7 +70,7 @@ export function GenerationPhase() {
 
   if (!genOpen) return null
   // Until health resolves, optimistically allow (button still guarded server-side).
-  const configured = health ? health.storage && health.luma : true
+  const configured = health ? health.fal : true
 
   const start = async () => {
     if (running) return
@@ -110,9 +110,7 @@ export function GenerationPhase() {
 
       {health && !configured && (
         <div className="genphase__notice">
-          Generation needs server config in <code>.env</code>:{' '}
-          {!health.luma && <code>LUMA_API_KEY</code>}{' '}
-          {!health.storage && <code>AWS_REGION + S3_BUCKET (+ credentials)</code>}.
+          Generation needs <code>FAL_API_KEY</code> in <code>.env</code>.
         </div>
       )}
 
@@ -132,7 +130,7 @@ export function GenerationPhase() {
                   ) : (
                     <div className="scene-card__placeholder" />
                   )}
-                  <span className="scene-card__badge">Luma</span>
+                  <span className="scene-card__badge">fal.ai</span>
                   {status !== 'idle' && status !== 'completed' && (
                     <span className={`scene-card__status ${status === 'failed' ? 'is-failed' : ''}`}>
                       {STATUS_LABEL[status]}

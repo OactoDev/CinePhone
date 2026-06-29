@@ -1,0 +1,424 @@
+/* =========================================================================
+   CinePhone — mobile-first UI layer
+   Clean, minimal, dark-on-light. All overlays sit above the R3F canvas.
+   ========================================================================= */
+
+:root {
+  --ink: #14161a;
+  --ink-soft: #5b6068;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-solid: #ffffff;
+  --line: rgba(20, 22, 26, 0.1);
+  --accent: #14161a;
+  --radius: 18px;
+  --shadow: 0 12px 40px rgba(20, 22, 26, 0.16);
+  --safe-b: env(safe-area-inset-bottom);
+  --safe-r: env(safe-area-inset-right);
+  --safe-t: env(safe-area-inset-top);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ---- Control rail (right side) ----------------------------------------- */
+.rail {
+  position: absolute;
+  top: 50%;
+  right: calc(var(--safe-r) + 14px);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  z-index: 30;
+}
+
+.rail__btn {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-soft);
+  transition: background 0.16s ease, color 0.16s ease, transform 0.08s ease;
+}
+
+.rail__btn:active {
+  transform: scale(0.92);
+}
+
+.rail__btn.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* In preview, collapse the rail to just the Stop button to declutter. */
+.app--preview .rail__btn:not(:first-child) {
+  display: none;
+}
+.app--preview .voice {
+  display: none;
+}
+
+/* ---- Voice transcript chip (top center) -------------------------------- */
+.voice {
+  position: absolute;
+  top: calc(var(--safe-t) + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(78vw, 460px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 13px;
+  z-index: 25;
+}
+
+.voice__mic {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(20, 22, 26, 0.06);
+  color: var(--ink-soft);
+  flex: none;
+}
+
+.voice.is-listening .voice__mic {
+  color: #e8553b;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.voice__text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-soft);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(232, 85, 59, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(232, 85, 59, 0);
+  }
+}
+
+/* ---- Scrim + bottom sheet ---------------------------------------------- */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 22, 26, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 35;
+}
+.scrim.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52vh;
+  max-height: 560px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 18px calc(var(--safe-b) + 18px);
+  background: var(--surface-solid);
+  border-radius: 22px 22px 0 0;
+  box-shadow: var(--shadow);
+  transform: translateY(102%);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 40;
+}
+.sheet.is-open {
+  transform: translateY(0);
+}
+
+.sheet__handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  margin: 6px auto 10px;
+  flex: none;
+}
+
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.sheet__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sheet__head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet__body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---- Tabs --------------------------------------------------------------- */
+.tabs {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(20, 22, 26, 0.06);
+}
+.tabs__tab {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.tabs__tab.is-active {
+  background: var(--surface-solid);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(20, 22, 26, 0.12);
+}
+
+/* ---- Card grid (terrain / objects palette) ----------------------------- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-solid);
+  color: var(--ink);
+  transition: border-color 0.16s ease, transform 0.08s ease;
+}
+.card:active {
+  transform: scale(0.96);
+}
+.card.is-active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.card__swatch {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(20, 22, 26, 0.08);
+}
+.card__label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ---- Placed-objects list ----------------------------------------------- */
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.list-head__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.obj-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.obj-list__empty {
+  color: var(--ink-soft);
+  font-size: 13px;
+  padding: 6px 2px;
+}
+.obj-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(20, 22, 26, 0.04);
+}
+.obj-row.is-selected {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.obj-row__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  flex: none;
+}
+.obj-row__name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+/* ---- Buttons (shared) --------------------------------------------------- */
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(20, 22, 26, 0.06);
+  color: var(--ink-soft);
+  transition: background 0.16s ease;
+}
+.icon-btn--sm {
+  width: 30px;
+  height: 30px;
+}
+.icon-btn:active {
+  background: rgba(20, 22, 26, 0.12);
+}
+
+.text-btn {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 4px;
+}
+.text-btn:disabled {
+  opacity: 0.4;
+}
+
+/* ---- Camera panel ------------------------------------------------------- */
+.panel-hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.cam-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-solid);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.pill-btn:disabled {
+  opacity: 0.4;
+}
+.pill-btn--rec {
+  color: #e8553b;
+}
+.pill-btn--rec.is-active {
+  background: #e8553b;
+  color: #fff;
+  border-color: #e8553b;
+}
+
+.timeline {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(20, 22, 26, 0.08);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.timeline__fill {
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  background: var(--accent);
+}
+.timeline__fill.is-playing {
+  animation: timeline-run linear forwards;
+}
+@keyframes timeline-run {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* ---- Slider ------------------------------------------------------------- */
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.slider__label {
+  flex: none;
+  color: var(--ink-soft);
+}
+.slider input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+.slider__value {
+  flex: none;
+  width: 38px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
